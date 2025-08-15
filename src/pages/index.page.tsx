@@ -197,13 +197,14 @@ export default function IndexPage() {
                 const episodes = item.episodes || 0;
                 const answerEpisodes = answer?.episodes || 0;
                 const compareEpisodes = episodes === answerEpisodes ? 0 : episodes > answerEpisodes ? 1 : -1;
-                const url = new URL(`https://duckduckgo.com/?q=${item.title} site:myanimelist.net&ia=web`);
+                const query = new URLSearchParams(`q=${item.title} site:myanimelist.net&ia=web`);
+                const url = `https://duckduckgo.com/?${query.toString()}`;
                 return (
                   <Table.Tr key={item.title} c={isCorrect ? "green" : undefined}>
                     <Table.Td>
                       <Text
                         component="a"
-                        href={url.toString()}
+                        href={url}
                         target="_blank"
                         span
                         size="sm"

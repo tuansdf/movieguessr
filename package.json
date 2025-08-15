@@ -12,6 +12,8 @@
   "dependencies": {
     "@mantine/core": "^8.2.2",
     "@mantine/hooks": "^8.2.2",
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6",
     "@tabler/icons-react": "^3.34.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
