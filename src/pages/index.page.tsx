@@ -111,20 +111,24 @@ export default function IndexPage() {
   return (
     <Flex maw={1200} w="100%" mx="auto" p="md" gap="md" direction="column">
       <Title ta="center">Anidle</Title>
-      <Flex align="center" justify="space-between" gap="md">
+      <Flex align="center" justify="space-between" gap="xs">
         {gameState ? (
           <Text fw={600} c={gameState === "lose" ? "red" : "green"}>
             You {gameState}
           </Text>
+        ) : !guesses?.length ? (
+          <Text span fw={600}>
+            Type your first guess to begin the game.
+          </Text>
         ) : (
           <div></div>
         )}
-        <Flex align="center" justify="flex-end" gap="md">
+        <Flex align="center" justify="flex-end" gap="xs">
           <Text fw={600}>
             Guess: {gameState === "lose" ? guesses.length - 1 : guesses.length} / {MAX_GUESSES}
           </Text>
           {!correct && (
-            <Button variant="outline" color="red" onClick={giveUp}>
+            <Button variant="outline" color="red" onClick={giveUp} style={{ flexShrink: 0 }}>
               Give up
             </Button>
           )}
@@ -156,119 +160,136 @@ export default function IndexPage() {
           </Button>
         </Flex>
       )}
-      <Table.ScrollContainer minWidth={800}>
-        <Table striped highlightOnHover withTableBorder withColumnBorders>
-          <Box component="colgroup">
-            <Box component="col" span={1} w="15%" />
-            <Box component="col" span={1} w="10%" />
-            <Box component="col" span={1} w="10%" />
-            <Box component="col" span={1} w="10%" />
-            <Box component="col" span={1} w="25%" />
-            <Box component="col" span={1} w="10%" />
-            <Box component="col" span={1} w="10%" />
-            <Box component="col" span={1} w="10%" />
-          </Box>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Title</Table.Th>
-              <Table.Th>Year</Table.Th>
-              <Table.Th>Season</Table.Th>
-              <Table.Th>Episodes</Table.Th>
-              <Table.Th>Tags</Table.Th>
-              <Table.Th>Studio</Table.Th>
-              <Table.Th>Producer</Table.Th>
-              <Table.Th>Score</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {guesses.map((item, index) => {
-              const isCorrect = index === 0 && correct;
-              const year = item.animeSeason?.year || 0;
-              const answerYear = answer?.animeSeason?.year || 0;
-              const compareYear = year === answerYear ? 0 : year > answerYear ? 1 : -1;
-              const score = item.score?.median || 0;
-              const answerScore = answer?.score?.median || 0;
-              const compareScore = score === answerScore ? 0 : score > answerScore ? 1 : -1;
-              const episodes = item.episodes || 0;
-              const answerEpisodes = answer?.episodes || 0;
-              const compareEpisodes = episodes === answerEpisodes ? 0 : episodes > answerEpisodes ? 1 : -1;
-              const url = new URL(`https://duckduckgo.com/?q=${item.title} site:myanimelist.net&ia=web`);
-              return (
-                <Table.Tr key={item.title} c={isCorrect ? "green" : undefined}>
-                  <Table.Td>
-                    <Text
-                      component="a"
-                      href={url.toString()}
-                      target="_blank"
-                      span
-                      size="sm"
-                      role="button"
-                      td="dotted"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <Text span mr={4}>
-                        {item.title}
+      {!!guesses.length && (
+        <Table.ScrollContainer minWidth={800}>
+          <Table striped highlightOnHover withTableBorder withColumnBorders>
+            <Box component="colgroup">
+              <Box component="col" span={1} w="15%" />
+              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="25%" />
+              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="10%" />
+            </Box>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Title</Table.Th>
+                <Table.Th>Year</Table.Th>
+                <Table.Th>Season</Table.Th>
+                <Table.Th>Episodes</Table.Th>
+                <Table.Th>Tags</Table.Th>
+                <Table.Th>Studio</Table.Th>
+                <Table.Th>Producer</Table.Th>
+                <Table.Th>Score</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {guesses.map((item, index) => {
+                const isCorrect = index === 0 && correct;
+                const year = item.animeSeason?.year || 0;
+                const answerYear = answer?.animeSeason?.year || 0;
+                const compareYear = year === answerYear ? 0 : year > answerYear ? 1 : -1;
+                const score = item.score?.median || 0;
+                const answerScore = answer?.score?.median || 0;
+                const compareScore = score === answerScore ? 0 : score > answerScore ? 1 : -1;
+                const episodes = item.episodes || 0;
+                const answerEpisodes = answer?.episodes || 0;
+                const compareEpisodes = episodes === answerEpisodes ? 0 : episodes > answerEpisodes ? 1 : -1;
+                const url = new URL(`https://duckduckgo.com/?q=${item.title} site:myanimelist.net&ia=web`);
+                return (
+                  <Table.Tr key={item.title} c={isCorrect ? "green" : undefined}>
+                    <Table.Td>
+                      <Text
+                        component="a"
+                        href={url.toString()}
+                        target="_blank"
+                        span
+                        size="sm"
+                        role="button"
+                        td="dotted"
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Text span mr={4}>
+                          {item.title}
+                        </Text>
+                        <IconSearch style={{ display: "inline" }} size={14} />
                       </Text>
-                      <IconSearch style={{ display: "inline" }} size={14} />
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Flex gap={4} align="center">
-                      <Text span size="sm" c={!compareYear ? "green" : undefined}>
-                        {year}
+                    </Table.Td>
+                    <Table.Td>
+                      <Flex gap={4} align="center">
+                        <Text span size="sm" c={!compareYear ? "green" : undefined} style={{ flexShrink: 0 }}>
+                          {year}
+                        </Text>
+                        {compareYear < 0 && (
+                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                        {compareYear > 0 && (
+                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                      </Flex>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text
+                        size="sm"
+                        c={item.animeSeason?.season === answer?.animeSeason?.season ? "green" : undefined}
+                      >
+                        {item.animeSeason?.season}
                       </Text>
-                      {compareYear < 0 && <IconArrowUp size={16} color={theme.colors.red[6]} />}
-                      {compareYear > 0 && <IconArrowDown size={16} color={theme.colors.red[6]} />}
-                    </Flex>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c={item.animeSeason?.season === answer?.animeSeason?.season ? "green" : undefined}>
-                      {item.animeSeason?.season}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Flex gap={4} align="center">
-                      <Text span size="sm" c={!compareEpisodes ? "green" : undefined}>
-                        {episodes}
+                    </Table.Td>
+                    <Table.Td>
+                      <Flex gap={4} align="center">
+                        <Text span size="sm" c={!compareEpisodes ? "green" : undefined} style={{ flexShrink: 0 }}>
+                          {episodes}
+                        </Text>
+                        {compareEpisodes < 0 && (
+                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                        {compareEpisodes > 0 && (
+                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                      </Flex>
+                    </Table.Td>
+                    <Table.Td>
+                      <PillGroup gap={4}>
+                        {item.tags?.map((tag, i) => (
+                          <Pill key={tag + "|" + i} c={answer?.tags?.includes(tag) ? "green" : undefined}>
+                            {tag}
+                          </Pill>
+                        ))}
+                      </PillGroup>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c={item.studios?.[0] === answer?.studios?.[0] ? "green" : undefined}>
+                        {item.studios?.[0]}
                       </Text>
-                      {compareEpisodes < 0 && <IconArrowUp size={16} color={theme.colors.red[6]} />}
-                      {compareEpisodes > 0 && <IconArrowDown size={16} color={theme.colors.red[6]} />}
-                    </Flex>
-                  </Table.Td>
-                  <Table.Td>
-                    <PillGroup gap={4}>
-                      {item.tags?.map((tag, i) => (
-                        <Pill key={tag + "|" + i} c={answer?.tags?.includes(tag) ? "green" : undefined}>
-                          {tag}
-                        </Pill>
-                      ))}
-                    </PillGroup>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c={item.studios?.[0] === answer?.studios?.[0] ? "green" : undefined}>
-                      {item.studios?.[0]}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c={item.producers?.[0] === answer?.producers?.[0] ? "green" : undefined}>
-                      {item.producers?.[0]}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Flex gap={4} align="center">
-                      <Text span size="sm" c={!compareScore ? "green" : undefined}>
-                        {score.toFixed(2)}
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c={item.producers?.[0] === answer?.producers?.[0] ? "green" : undefined}>
+                        {item.producers?.[0]}
                       </Text>
-                      {compareScore < 0 && <IconArrowUp size={16} color={theme.colors.red[6]} />}
-                      {compareScore > 0 && <IconArrowDown size={16} color={theme.colors.red[6]} />}
-                    </Flex>
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+                    </Table.Td>
+                    <Table.Td>
+                      <Flex gap={4} align="center">
+                        <Text span size="sm" c={!compareScore ? "green" : undefined} style={{ flexShrink: 0 }}>
+                          {score.toFixed(2)}
+                        </Text>
+                        {compareScore < 0 && (
+                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                        {compareScore > 0 && (
+                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
+                        )}
+                      </Flex>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      )}
     </Flex>
   );
 }
