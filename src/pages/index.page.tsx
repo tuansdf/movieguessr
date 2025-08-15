@@ -110,7 +110,7 @@ export default function IndexPage() {
 
   return (
     <Flex maw={1200} w="100%" mx="auto" p="md" gap="md" direction="column">
-      <Title ta="center">MovieGuessr</Title>
+      <Title ta="center">Anidle</Title>
       <Flex align="center" justify="space-between" gap="md">
         {gameState ? (
           <Text fw={600} c={gameState === "lose" ? "red" : "green"}>
