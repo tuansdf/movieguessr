@@ -3,6 +3,14 @@ import { Box, Button, Flex, Pill, PillGroup, Select, Table, Text, Title, useMant
 import { IconArrowDown, IconArrowUp, IconSearch } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
+const TAGS_EACH_ANIME = 20;
+const MAX_GUESSES = 20;
+
+type ComparisonItem = {
+  value: string | number;
+  result?: "=" | "<" | ">";
+};
+
 export interface Movie {
   title?: string;
   type?: string;
@@ -20,21 +28,34 @@ export interface Movie {
   studios?: string[];
   producers?: string[];
   tags?: string[];
+  comparison?: {
+    studios?: ComparisonItem[];
+    producers?: ComparisonItem[];
+    tags?: ComparisonItem[];
+    score?: ComparisonItem;
+    episodes?: ComparisonItem;
+    year?: ComparisonItem;
+    season?: ComparisonItem;
+  };
 }
 
-const titles = data.map((item) => item.title);
-
-const shuffleList = <T,>(items: T[], num?: number) => {
-  if (!items) return [];
-  const shuffled = [...items].sort(() => Math.random() - 0.5);
-  if (num) {
-    return shuffled.slice(0, num);
-  }
-  return shuffled;
+const createListComparison = (target: string[], matching: string[]): ComparisonItem[] => {
+  const shuffled = [...matching].sort(() => Math.random() - 0.5);
+  const matchingItems = shuffled.filter((item) => target.includes(item));
+  const unmatchingItems = shuffled.filter((item) => !target.includes(item));
+  const result = [...matchingItems, ...unmatchingItems].slice(0, TAGS_EACH_ANIME);
+  return result.map((item) => ({ value: item, result: target.includes(item) ? "=" : undefined }));
 };
 
-const TAGS_EACH_ANIME = 20;
-const MAX_GUESSES = 20;
+const createNumberComparison = (target: number, matching: number): ComparisonItem => {
+  target = Number(target.toFixed(2));
+  matching = Number(matching.toFixed(2));
+  if (matching > target) return { value: matching, result: ">" };
+  if (matching < target) return { value: matching, result: "<" };
+  return { value: matching, result: "=" };
+};
+
+const titles = data.map((item) => item.title || "");
 
 export default function IndexPage() {
   const theme = useMantineTheme();
@@ -44,7 +65,7 @@ export default function IndexPage() {
   const [correct, setCorrect] = useState<boolean>(false);
   const [gameState, setGameState] = useState<"win" | "lose" | undefined>();
 
-  const unguessedTitles = useMemo(() => {
+  const availableTitles = useMemo(() => {
     if (guesses.length === 0) return titles;
     return titles.filter((title) => !guesses.some((item) => item.title === title));
   }, [guesses]);
@@ -53,25 +74,21 @@ export default function IndexPage() {
     if (!answer || !title) return false;
     let guessed: Movie | undefined = data.find((item) => item.title === title);
     if (!guessed) return false;
-    const shuffled = shuffleList(guessed.tags || []);
-    let tags = shuffled.filter((item) => answer.tags?.includes(item));
-    if (tags.length >= TAGS_EACH_ANIME) {
-      tags = tags.slice(0, TAGS_EACH_ANIME);
-    } else {
-      tags = [
-        ...tags,
-        ...shuffled.filter((item) => !answer.tags?.includes(item)).slice(0, TAGS_EACH_ANIME - tags.length),
-      ];
-    }
-    let studio = guessed.studios?.find((item) => answer.studios?.includes(item)) || "";
-    if (!studio) {
-      studio = guessed.studios?.[0] || "";
-    }
-    let producer = guessed.producers?.find((item) => answer.producers?.includes(item)) || "";
-    if (!producer) {
-      producer = guessed.producers?.[0] || "";
-    }
-    guessed = { ...guessed, tags, studios: [studio], producers: [producer] };
+    guessed = {
+      ...guessed,
+      comparison: {
+        tags: createListComparison(answer.tags || [], guessed.tags || []),
+        studios: createListComparison(answer.studios || [], guessed.studios || []),
+        producers: createListComparison(answer.producers || [], guessed.producers || []),
+        year: createNumberComparison(answer.animeSeason?.year || 0, guessed.animeSeason?.year || 0),
+        episodes: createNumberComparison(answer.episodes || 0, guessed.episodes || 0),
+        score: createNumberComparison(answer.score?.median || 0, guessed.score?.median || 0),
+        season: {
+          value: guessed.animeSeason?.season || "",
+          result: answer.animeSeason?.season === guessed.animeSeason?.season ? "=" : undefined,
+        },
+      },
+    };
     setGuesses((prev) => [guessed!, ...prev]);
     setInput(null);
     if (guessed?.title === answer?.title) {
@@ -149,7 +166,7 @@ export default function IndexPage() {
             searchable
             flex={1}
             placeholder="Type your answer"
-            data={unguessedTitles}
+            data={availableTitles}
             limit={100}
             value={input}
             onChange={(value) => setInput(value)}
@@ -188,15 +205,6 @@ export default function IndexPage() {
             <Table.Tbody>
               {guesses.map((item, index) => {
                 const isCorrect = index === 0 && correct;
-                const year = item.animeSeason?.year || 0;
-                const answerYear = answer?.animeSeason?.year || 0;
-                const compareYear = year === answerYear ? 0 : year > answerYear ? 1 : -1;
-                const score = item.score?.median || 0;
-                const answerScore = answer?.score?.median || 0;
-                const compareScore = score === answerScore ? 0 : score > answerScore ? 1 : -1;
-                const episodes = item.episodes || 0;
-                const answerEpisodes = answer?.episodes || 0;
-                const compareEpisodes = episodes === answerEpisodes ? 0 : episodes > answerEpisodes ? 1 : -1;
                 const query = new URLSearchParams(`q=${item.title} site:myanimelist.net&ia=web`);
                 const url = `https://duckduckgo.com/?${query.toString()}`;
                 return (
@@ -220,13 +228,18 @@ export default function IndexPage() {
                     </Table.Td>
                     <Table.Td>
                       <Flex gap={4} align="center">
-                        <Text span size="sm" c={!compareYear ? "green" : undefined} style={{ flexShrink: 0 }}>
-                          {year}
+                        <Text
+                          span
+                          size="sm"
+                          c={item.comparison?.year?.result === "=" ? "green" : undefined}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {item.comparison?.year?.value}
                         </Text>
-                        {compareYear < 0 && (
+                        {item.comparison?.year?.result === "<" && (
                           <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
-                        {compareYear > 0 && (
+                        {item.comparison?.year?.result === ">" && (
                           <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
                       </Flex>
@@ -241,45 +254,63 @@ export default function IndexPage() {
                     </Table.Td>
                     <Table.Td>
                       <Flex gap={4} align="center">
-                        <Text span size="sm" c={!compareEpisodes ? "green" : undefined} style={{ flexShrink: 0 }}>
-                          {episodes}
+                        <Text
+                          span
+                          size="sm"
+                          c={item.comparison?.episodes?.result === "=" ? "green" : undefined}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {item.comparison?.episodes?.value}
                         </Text>
-                        {compareEpisodes < 0 && (
+                        {item.comparison?.episodes?.result === "<" && (
                           <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
-                        {compareEpisodes > 0 && (
+                        {item.comparison?.episodes?.result === ">" && (
                           <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
                       </Flex>
                     </Table.Td>
                     <Table.Td>
                       <PillGroup gap={4}>
-                        {item.tags?.map((tag, i) => (
-                          <Pill key={tag + "|" + i} c={answer?.tags?.includes(tag) ? "green" : undefined}>
-                            {tag}
+                        {item.comparison?.tags?.map((tag, i) => (
+                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
+                            {tag.value}
                           </Pill>
                         ))}
                       </PillGroup>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm" c={item.studios?.[0] === answer?.studios?.[0] ? "green" : undefined}>
-                        {item.studios?.[0]}
-                      </Text>
+                      <PillGroup gap={4}>
+                        {item.comparison?.studios?.map((tag, i) => (
+                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
+                            {tag.value}
+                          </Pill>
+                        ))}
+                      </PillGroup>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm" c={item.producers?.[0] === answer?.producers?.[0] ? "green" : undefined}>
-                        {item.producers?.[0]}
-                      </Text>
+                      <PillGroup gap={4}>
+                        {item.comparison?.producers?.map((tag, i) => (
+                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
+                            {tag.value}
+                          </Pill>
+                        ))}
+                      </PillGroup>
                     </Table.Td>
                     <Table.Td>
                       <Flex gap={4} align="center">
-                        <Text span size="sm" c={!compareScore ? "green" : undefined} style={{ flexShrink: 0 }}>
-                          {score.toFixed(2)}
+                        <Text
+                          span
+                          size="sm"
+                          c={item.comparison?.score?.result === "=" ? "green" : undefined}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {item.comparison?.score?.value}
                         </Text>
-                        {compareScore < 0 && (
+                        {item.comparison?.score?.result === "<" && (
                           <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
-                        {compareScore > 0 && (
+                        {item.comparison?.score?.result === ">" && (
                           <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
                         )}
                       </Flex>
