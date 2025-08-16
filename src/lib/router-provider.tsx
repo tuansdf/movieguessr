@@ -1,7 +1,10 @@
 import IndexPage from "@/pages/index.page.js";
-import { createBrowserRouter, RouterProvider as ARouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider as ARouterProvider } from "react-router";
 
-const router = createBrowserRouter([{ index: true, Component: IndexPage }]);
+const router = createBrowserRouter([
+  { index: true, Component: IndexPage },
+  { path: "*", element: <Navigate to="/" /> },
+]);
 
 export const RouterProvider = () => {
   return <ARouterProvider router={router} />;
