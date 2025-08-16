@@ -58,7 +58,6 @@ const createNumberComparison = (target: number, matching: number): ComparisonIte
 const titles = data.map((item) => item.title || "");
 
 export default function IndexPage() {
-  const theme = useMantineTheme();
   const [input, setInput] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<Movie[]>([]);
   const [answer, setAnswer] = useState<Movie | null>();
@@ -206,7 +205,7 @@ export default function IndexPage() {
               {guesses.map((item, index) => {
                 const isCorrect = index === 0 && correct;
                 const query = new URLSearchParams(`q=${item.title} site:myanimelist.net&ia=web`);
-                const url = `https://duckduckgo.com/?${query.toString()}`;
+                const url = `https://www.google.com/search?${query.toString()}`;
                 return (
                   <Table.Tr key={item.title} c={isCorrect ? "green" : undefined}>
                     <Table.Td>
@@ -227,93 +226,25 @@ export default function IndexPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Flex gap={4} align="center">
-                        <Text
-                          span
-                          size="sm"
-                          c={item.comparison?.year?.result === "=" ? "green" : undefined}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {item.comparison?.year?.value}
-                        </Text>
-                        {item.comparison?.year?.result === "<" && (
-                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                        {item.comparison?.year?.result === ">" && (
-                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                      </Flex>
+                      <TextComparison item={item.comparison?.year} />
                     </Table.Td>
                     <Table.Td>
-                      <Text
-                        size="sm"
-                        c={item.animeSeason?.season === answer?.animeSeason?.season ? "green" : undefined}
-                      >
-                        {item.animeSeason?.season}
-                      </Text>
+                      <TextComparison item={item.comparison?.season} />
                     </Table.Td>
                     <Table.Td>
-                      <Flex gap={4} align="center">
-                        <Text
-                          span
-                          size="sm"
-                          c={item.comparison?.episodes?.result === "=" ? "green" : undefined}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {item.comparison?.episodes?.value}
-                        </Text>
-                        {item.comparison?.episodes?.result === "<" && (
-                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                        {item.comparison?.episodes?.result === ">" && (
-                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                      </Flex>
+                      <TextComparison item={item.comparison?.episodes} />
                     </Table.Td>
                     <Table.Td>
-                      <PillGroup gap={4}>
-                        {item.comparison?.tags?.map((tag, i) => (
-                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
-                            {tag.value}
-                          </Pill>
-                        ))}
-                      </PillGroup>
+                      <ListComparison item={item.comparison?.tags} />
                     </Table.Td>
                     <Table.Td>
-                      <PillGroup gap={4}>
-                        {item.comparison?.studios?.map((tag, i) => (
-                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
-                            {tag.value}
-                          </Pill>
-                        ))}
-                      </PillGroup>
+                      <ListComparison item={item.comparison?.studios} />
                     </Table.Td>
                     <Table.Td>
-                      <PillGroup gap={4}>
-                        {item.comparison?.producers?.map((tag, i) => (
-                          <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
-                            {tag.value}
-                          </Pill>
-                        ))}
-                      </PillGroup>
+                      <ListComparison item={item.comparison?.producers} />
                     </Table.Td>
                     <Table.Td>
-                      <Flex gap={4} align="center">
-                        <Text
-                          span
-                          size="sm"
-                          c={item.comparison?.score?.result === "=" ? "green" : undefined}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {item.comparison?.score?.value}
-                        </Text>
-                        {item.comparison?.score?.result === "<" && (
-                          <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                        {item.comparison?.score?.result === ">" && (
-                          <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />
-                        )}
-                      </Flex>
+                      <TextComparison item={item.comparison?.score} />
                     </Table.Td>
                   </Table.Tr>
                 );
@@ -325,3 +256,28 @@ export default function IndexPage() {
     </Flex>
   );
 }
+
+const TextComparison = (props: { item?: ComparisonItem }) => {
+  const theme = useMantineTheme();
+  return (
+    <Flex gap={4} align="center">
+      <Text span size="sm" c={props.item?.result === "=" ? "green" : undefined} style={{ flexShrink: 0 }}>
+        {props.item?.value}
+      </Text>
+      {props.item?.result === "<" && <IconArrowUp size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />}
+      {props.item?.result === ">" && <IconArrowDown size={16} color={theme.colors.red[6]} style={{ flexShrink: 0 }} />}
+    </Flex>
+  );
+};
+
+const ListComparison = (props: { item?: ComparisonItem[] }) => {
+  return (
+    <PillGroup gap={4}>
+      {props.item?.map((tag, i) => (
+        <Pill key={tag + "|" + i} c={tag.result === "=" ? "green" : undefined}>
+          {tag.value}
+        </Pill>
+      ))}
+    </PillGroup>
+  );
+};
