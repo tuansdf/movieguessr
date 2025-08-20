@@ -3,6 +3,10 @@ import { Box, Button, Flex, Pill, PillGroup, Select, Table, Text, Title, useMant
 import { IconArrowDown, IconArrowUp, IconSearch } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
+export type MakeNullish<TObject extends Record<any, any>> = {
+  [TKey in keyof TObject]?: TObject[TKey] | null | undefined;
+};
+
 const TAGS_EACH_ANIME = 20;
 const MAX_GUESSES = 20;
 
@@ -11,43 +15,64 @@ type ComparisonItem = {
   result?: "=" | "<" | ">";
 };
 
-export interface Movie {
-  title?: string;
-  type?: string;
-  episodes?: number;
-  status?: string;
-  animeSeason?: {
-    season?: string;
-    year?: number;
+export type Anime = MakeNullish<{
+  mal_id: number;
+  url: string;
+  approved: boolean;
+  titles: { title: string; type: string }[];
+  title: string;
+  type: string;
+  source: string;
+  episodes: number;
+  status: string;
+  airing: boolean;
+  duration: string;
+  rating: string;
+  score: number;
+  scored_by: number;
+  rank: number;
+  popularity: number;
+  members: number;
+  favorites: number;
+  season: string;
+  year: number;
+  producers: string[];
+  licensors: string[];
+  studios: string[];
+  genres: string[];
+  explicit_genres: string[];
+  themes: string[];
+  demographics: string[];
+  comparisons: {
+    episodes: ComparisonItem;
+    score: ComparisonItem;
+    season: ComparisonItem;
+    source: ComparisonItem;
+    year: ComparisonItem;
+    producers: ComparisonItem[];
+    studios: ComparisonItem[];
+    genres: ComparisonItem[];
+    themes: ComparisonItem[];
   };
-  duration?: {
-    value?: number;
-    unit?: string;
-  };
-  score?: { arithmeticGeometricMean?: number; arithmeticMean?: number; median?: number };
-  studios?: string[];
-  producers?: string[];
-  tags?: string[];
-  comparison?: {
-    studios?: ComparisonItem[];
-    producers?: ComparisonItem[];
-    tags?: ComparisonItem[];
-    score?: ComparisonItem;
-    episodes?: ComparisonItem;
-    year?: ComparisonItem;
-    season?: ComparisonItem;
-  };
-}
+}>;
 
-const createListComparison = (target: string[], matching: string[]): ComparisonItem[] => {
-  const shuffled = [...matching].sort(() => Math.random() - 0.5);
-  const matchingItems = shuffled.filter((item) => target.includes(item));
-  const unmatchingItems = shuffled.filter((item) => !target.includes(item));
+const createListComparison = (
+  target: string[] | undefined | null,
+  matching: string[] | undefined | null,
+): ComparisonItem[] => {
+  target = target || [];
+  matching = matching || [];
+  const matchingItems = matching.filter((item) => target.includes(item));
+  const unmatchingItems = matching.filter((item) => !target.includes(item));
   const result = [...matchingItems, ...unmatchingItems].slice(0, TAGS_EACH_ANIME);
   return result.map((item) => ({ value: item, result: target.includes(item) ? "=" : undefined }));
 };
 
-const createNumberComparison = (target: number, matching: number): ComparisonItem => {
+const createNumberComparison = (
+  target: number | undefined | null,
+  matching: number | undefined | null,
+): ComparisonItem => {
+  if (!matching || !target) return { value: "" };
   target = Number(target.toFixed(2));
   matching = Number(matching.toFixed(2));
   if (matching > target) return { value: matching, result: ">" };
@@ -55,12 +80,41 @@ const createNumberComparison = (target: number, matching: number): ComparisonIte
   return { value: matching, result: "=" };
 };
 
+const createEqualComparison = (
+  target: number | string | undefined | null,
+  matching: number | string | undefined | null,
+): ComparisonItem => {
+  target = target || "";
+  matching = matching || "";
+  return {
+    value: matching,
+    result: target === matching ? "=" : undefined,
+  };
+};
+
+const createComparisons = (target: Anime, matching: Anime): Anime => {
+  return {
+    ...matching,
+    comparisons: {
+      episodes: createNumberComparison(target.episodes, matching.episodes),
+      year: createNumberComparison(target.year, matching.year),
+      score: createNumberComparison(target.score, matching.score),
+      season: createEqualComparison(target.season, matching.season),
+      source: createEqualComparison(target.source, matching.source),
+      producers: createListComparison(target.producers, matching.producers),
+      studios: createListComparison(target.studios, matching.studios),
+      genres: createListComparison(target.genres, matching.genres),
+      themes: createListComparison(target.themes, matching.themes),
+    },
+  };
+};
+
 const titles = data.map((item) => item.title || "");
 
 export default function IndexPage() {
   const [input, setInput] = useState<string | null>(null);
-  const [guesses, setGuesses] = useState<Movie[]>([]);
-  const [answer, setAnswer] = useState<Movie | null>();
+  const [guesses, setGuesses] = useState<Anime[]>([]);
+  const [answer, setAnswer] = useState<Anime | null>();
   const [correct, setCorrect] = useState<boolean>(false);
   const [gameState, setGameState] = useState<"win" | "lose" | undefined>();
 
@@ -71,23 +125,9 @@ export default function IndexPage() {
 
   const guess = (title?: string): boolean => {
     if (!answer || !title) return false;
-    let guessed: Movie | undefined = data.find((item) => item.title === title);
+    let guessed: Anime | undefined = data.find((item) => item.title === title);
     if (!guessed) return false;
-    guessed = {
-      ...guessed,
-      comparison: {
-        tags: createListComparison(answer.tags || [], guessed.tags || []),
-        studios: createListComparison(answer.studios || [], guessed.studios || []),
-        producers: createListComparison(answer.producers || [], guessed.producers || []),
-        year: createNumberComparison(answer.animeSeason?.year || 0, guessed.animeSeason?.year || 0),
-        episodes: createNumberComparison(answer.episodes || 0, guessed.episodes || 0),
-        score: createNumberComparison(answer.score?.median || 0, guessed.score?.median || 0),
-        season: {
-          value: guessed.animeSeason?.season || "",
-          result: answer.animeSeason?.season === guessed.animeSeason?.season ? "=" : undefined,
-        },
-      },
-    };
+    guessed = createComparisons(answer, guessed);
     setGuesses((prev) => [guessed!, ...prev]);
     setInput(null);
     if (guessed?.title === answer?.title) {
@@ -180,14 +220,16 @@ export default function IndexPage() {
         <Table.ScrollContainer minWidth={800}>
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Box component="colgroup">
-              <Box component="col" span={1} w="15%" />
-              <Box component="col" span={1} w="10%" />
-              <Box component="col" span={1} w="10%" />
-              <Box component="col" span={1} w="10%" />
-              <Box component="col" span={1} w="25%" />
-              <Box component="col" span={1} w="10%" />
-              <Box component="col" span={1} w="10%" />
-              <Box component="col" span={1} w="10%" />
+              <Box component="col" span={1} w="12.5%" />
+              <Box component="col" span={1} w="7.5%" />
+              <Box component="col" span={1} w="7.5%" />
+              <Box component="col" span={1} w="7.5%" />
+              <Box component="col" span={1} w="12.5%" />
+              <Box component="col" span={1} w="12.5%" />
+              <Box component="col" span={1} w="12.5%" />
+              <Box component="col" span={1} w="12.5%" />
+              <Box component="col" span={1} w="7.5%" />
+              <Box component="col" span={1} w="7.5%" />
             </Box>
             <Table.Thead>
               <Table.Tr>
@@ -195,23 +237,23 @@ export default function IndexPage() {
                 <Table.Th>Year</Table.Th>
                 <Table.Th>Season</Table.Th>
                 <Table.Th>Episodes</Table.Th>
-                <Table.Th>Tags</Table.Th>
-                <Table.Th>Studio</Table.Th>
-                <Table.Th>Producer</Table.Th>
+                <Table.Th>Genres</Table.Th>
+                <Table.Th>Themes</Table.Th>
+                <Table.Th>Studios</Table.Th>
+                <Table.Th>Producers</Table.Th>
+                <Table.Th>Source</Table.Th>
                 <Table.Th>Score</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {guesses.map((item, index) => {
                 const isCorrect = index === 0 && correct;
-                const query = new URLSearchParams(`q=${item.title} site:myanimelist.net&ia=web`);
-                const url = `https://www.google.com/search?${query.toString()}`;
                 return (
                   <Table.Tr key={item.title} c={isCorrect ? "green" : undefined}>
                     <Table.Td>
                       <Text
                         component="a"
-                        href={url}
+                        href={item.url || ""}
                         target="_blank"
                         span
                         size="sm"
@@ -226,25 +268,31 @@ export default function IndexPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <TextComparison item={item.comparison?.year} />
+                      <TextComparison item={item.comparisons?.year} />
                     </Table.Td>
                     <Table.Td>
-                      <TextComparison item={item.comparison?.season} />
+                      <TextComparison item={item.comparisons?.season} />
                     </Table.Td>
                     <Table.Td>
-                      <TextComparison item={item.comparison?.episodes} />
+                      <TextComparison item={item.comparisons?.episodes} />
                     </Table.Td>
                     <Table.Td>
-                      <ListComparison item={item.comparison?.tags} />
+                      <ListComparison item={item.comparisons?.genres} />
                     </Table.Td>
                     <Table.Td>
-                      <ListComparison item={item.comparison?.studios} />
+                      <ListComparison item={item.comparisons?.themes} />
                     </Table.Td>
                     <Table.Td>
-                      <ListComparison item={item.comparison?.producers} />
+                      <ListComparison item={item.comparisons?.studios} />
                     </Table.Td>
                     <Table.Td>
-                      <TextComparison item={item.comparison?.score} />
+                      <ListComparison item={item.comparisons?.producers} />
+                    </Table.Td>
+                    <Table.Td>
+                      <TextComparison item={item.comparisons?.source} />
+                    </Table.Td>
+                    <Table.Td>
+                      <TextComparison item={item.comparisons?.score} />
                     </Table.Td>
                   </Table.Tr>
                 );
